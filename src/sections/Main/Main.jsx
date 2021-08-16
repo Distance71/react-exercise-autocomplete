@@ -11,8 +11,9 @@ class Main extends Component {
     super(props);
 
     this.state = {
-      options: []
+      options: [],
     };
+    
     this.fetchCoins = this.fetchCoins.bind(this);
   }
 
@@ -28,7 +29,7 @@ class Main extends Component {
   componentDidMount() {
     this.fetchCoins();
   }
-
+  
   render() {
     return (
       <div className="App">

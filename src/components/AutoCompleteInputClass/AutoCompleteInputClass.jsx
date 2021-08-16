@@ -5,7 +5,7 @@ import { debounce } from '../../lib/utils';
 
 const DEBOUNCE_TIMEOUT = 500;
 const ITEM_HEIGHT = 20;
-const ITEMS_PAGE = 100;
+const ITEMS_PAGE = 300;
 
 const styles = {
   container: {
@@ -13,39 +13,38 @@ const styles = {
     height: '50vh',
     position: 'relative',
     background: '#fafafa',
-    border: '1px solid #eee',
     display: 'flex',
     alignItems: 'center',
     flexDirection: 'column',
   },
   listWrapper: {
-    top: '20%',
-    width: '50%',
+    top: '12%',
+    width: '52%',
     bottom: 0,
     overflowY: 'auto',
-    position: 'absolute',
+    position: 'absolute',    
   },
   list: (height) => ({
     height,
-    position: 'relative',
   }),
   listItem: (top) => ({
     height: '10px',
-    padding: '10px',
-    left: 0,
-    right: 0,
+    padding: '10px 2px',
+    backgroundColor: 'white',
+    border: '1px solid black',
     top: top + 'px',
     position: 'relative',
     color: 'black',
-    fontSize: '0.7rem',
+    fontSize: '0.5rem',
   }),
   input: {
-    height: '10%',
+    height: '5vh',
     width: '50%'
   },
 }
 
 // TO Fix: It may fail when an user scroll faster. Would be ok to add a loader
+// TO Fix: It fails when the user scrolls down after a high index
 class AutoCompleteInputClass extends Component {
   constructor(props) {
     super(props);
@@ -54,26 +53,16 @@ class AutoCompleteInputClass extends Component {
       visibleHeight: 0,
       scrollPos: 0,
       elementsHeight: {},
-      showOptions: false,
+      areOptionsShown: false,
       listHeight: 0,
+      name: '',
     };
     this.listWrapperRef = React.createRef();
 
     this.handleChange = this.handleChange.bind(this);
-    this.showOptions = this.showOptions.bind(this);
+    this.onFocus = this.onFocus.bind(this);
+    this.onBlur = this.onBlur.bind(this);
     this.handleScroll = this.handleScroll.bind(this);
-  }
-
-  setItemsHeight(options) {
-    let listHeight = 0;
-
-    const elementsHeight = options.reduce((acc, val) => {
-      acc[val.id] = listHeight;
-      listHeight += ITEM_HEIGHT;
-      return acc;
-    }, {});
-
-    this.setState({ elementsHeight, listHeight })
   }
 
   componentDidMount() {
@@ -90,11 +79,6 @@ class AutoCompleteInputClass extends Component {
     this.setItemsHeight(options);
   }
 
-  handleScroll() {
-    const scrollPos = this.listWrapperRef?.current?.scrollTop;
-    this.setState({ scrollPos })
-  }
-
   componentDidUpdate(prevProps) {
     const { options } = this.props;
     if (prevProps.options.length !== options.length) {
@@ -102,10 +86,30 @@ class AutoCompleteInputClass extends Component {
     }
   }
 
-  handleChange (e) {
+  setItemsHeight(options) {
+    let listHeight = 0;
+
+    const elementsHeight = options.reduce((acc, val) => {
+      acc[val.id] = listHeight;
+      listHeight += ITEM_HEIGHT;
+      return acc;
+    }, {});
+
+    this.setState({ elementsHeight, listHeight })
+  }
+
+  handleScroll() {
+    const scrollPos = this.listWrapperRef?.current?.scrollTop;
+    this.setState({ scrollPos })
+  }
+
+  handleChange(e) {
     const { onChange } = this.props;
+
+    this.setState({ name: e.target.value || e.target.outerText });
+
     debounce(() => {
-      onChange(e.target.value)
+      onChange(e.target.value || e.target.outerText)
     }, DEBOUNCE_TIMEOUT);
   }
 
@@ -123,17 +127,22 @@ class AutoCompleteInputClass extends Component {
     );
   }
 
-  showOptions() {
-    this.setState({ showOptions: !this.state.showOptions })
+  onFocus() {
+    this.setState({ areOptionsShown: true });
+  }
+
+  onBlur() {
+    this.setState({ areOptionsShown: false });
   }
 
   itemRenderer({
     id, 
     name,
   }) {
+    
     const top = this.state.elementsHeight[id];
     return (
-      <div key={id} style={styles.listItem({ top })}> 
+      <div key={id} onMouseDown={this.handleChange} style={styles.listItem({ top })}> 
         {name}
       </div>
     );
@@ -141,7 +150,7 @@ class AutoCompleteInputClass extends Component {
 
   render() {
     const { placeholder, options } = this.props;
-    const { showOptions } = this.state;
+    const { areOptionsShown, name } = this.state;
 
     return (
       <div style={styles.container}>
@@ -149,16 +158,18 @@ class AutoCompleteInputClass extends Component {
           type="text" 
           style={styles.input}
           placeholder={placeholder} 
-          onFocus={this.showOptions}
-          onBlur={this.showOptions}
-          onChange={this.handleChange} />
+          onFocus={this.onFocus}
+          onBlur={this.onBlur}
+          onChange={this.handleChange}
+          value={name}
+        />
         <div 
           style={styles.listWrapper} 
           ref={this.listWrapperRef}
           onScroll={this.handleScroll}
         >
           <div style={styles.list(this.state.listHeight)}>
-          {showOptions && options.map(item => {
+          {areOptionsShown && options.map(item => {
             return (this.checkItemVisibility(item.id)
             && this.itemRenderer(item))
           })}
